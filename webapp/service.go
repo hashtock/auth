@@ -37,7 +37,11 @@ func (a *authService) getCurrentUser(req *http.Request) (user goth.User, ok bool
 		return
 	}
 
-	sessionId := session.Values[sessionIdKey].(string)
+	sessionId := ""
+	if value, ok := session.Values[sessionIdKey]; ok {
+		sessionId = value.(string)
+	}
+
 	if sessionId == "" {
 		ok = false
 		return
@@ -53,7 +57,11 @@ func (a *authService) setCurrentUser(rw http.ResponseWriter, req *http.Request, 
 		return
 	}
 
-	sessionId := session.Values[sessionIdKey].(string)
+	sessionId := ""
+	if value, ok := session.Values[sessionIdKey]; ok {
+		sessionId = value.(string)
+	}
+
 	if sessionId == "" {
 		sessionId = uuid.New()
 	}

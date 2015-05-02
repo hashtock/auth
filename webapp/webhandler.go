@@ -15,9 +15,8 @@ import (
 // Handlers build http handler for service API
 func Handlers(cfg *conf.Config) http.Handler {
 	auth := authService{
-		// SessionName: cfg.SessionName,
-		SessionName:  "test",
-		SessionStore: sessions.NewCookieStore([]byte("something-very-secret")),
+		SessionName:  cfg.SessionName,
+		SessionStore: sessions.NewCookieStore([]byte(cfg.SessionSecret)),
 	}
 
 	m := mux.NewRouter()
