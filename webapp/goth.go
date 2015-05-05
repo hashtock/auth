@@ -13,21 +13,31 @@ import (
 	"github.com/hashtock/auth/conf"
 )
 
-func setupGoth(cfg *conf.Config, callbackRoute *mux.Route) error {
+func setupGoth(cfg *conf.Config, loginRoute, callbackRoute *mux.Route) (map[string]string, error) {
 	gothic.GetState = getState
 	gothic.GetProviderName = getProviderName
 	gothic.AppKey = cfg.SessionSecret
 	gothic.Store = sessions.NewCookieStore([]byte(gothic.AppKey))
 
-	path, err := callbackRoute.URL("provider", "gplus")
+	providers := make(map[string]string, 0)
+
+	// Google Auth
+	const googleProvider string = "gplus"
+	callbackPath, err := callbackRoute.URL("provider", googleProvider)
 	if err != nil {
-		return err
+		return providers, err
 	}
 
-	googleAuthCallback, err := cfg.AppAddress.Parse(path.String())
+	googleAuthCallback, err := cfg.AppAddress.Parse(callbackPath.String())
 	if err != nil {
-		return err
+		return providers, err
 	}
+
+	loginPath, err := loginRoute.URL("provider", googleProvider)
+	if err != nil {
+		return providers, err
+	}
+	providers[googleProvider] = loginPath.String()
 
 	goth.UseProviders(
 		gplus.New(
@@ -37,7 +47,7 @@ func setupGoth(cfg *conf.Config, callbackRoute *mux.Route) error {
 		),
 	)
 
-	return nil
+	return providers, nil
 }
 
 func getState(req *http.Request) string {

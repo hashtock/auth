@@ -9,10 +9,11 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
+
+	"github.com/hashtock/service-tools/serialize"
 )
 
 var (
-	loginTemplate  = `<p><a href="/auth/gplus/">Log in with Google</a></p>`
 	oldUserTemplte = `<p>Wecome back {{ .Name }}</p>`
 	newUserTemplte = `<p>Wecome {{ .Name }}</p>`
 )
@@ -28,48 +29,37 @@ func init() {
 type authService struct {
 	SessionName  string
 	SessionStore sessions.Store
+	Serializer   serialize.Serializer
+	Providers    map[string]string
 }
 
-func (a *authService) getCurrentUser(req *http.Request) (user goth.User, ok bool) {
-	session, err := a.SessionStore.Get(req, a.SessionName)
-	if err != nil {
-		ok = false
-		return
-	}
-
-	sessionId := ""
-	if value, ok := session.Values[sessionIdKey]; ok {
-		sessionId = value.(string)
-	}
-
-	if sessionId == "" {
-		ok = false
-		return
-	}
-
-	user, ok = users[sessionId]
-	return
+type LoginProvider struct {
+	Name string `json:"name"`
+	URI  string `json:"uri"`
 }
 
-func (a *authService) setCurrentUser(rw http.ResponseWriter, req *http.Request, user goth.User) {
-	session, err := a.SessionStore.Get(req, a.SessionName)
-	if err != nil {
+//////////////
+// Handlers //
+//////////////
+
+func (a *authService) who(rw http.ResponseWriter, req *http.Request) {
+	user, ok := a.getCurrentUser(req)
+	if !ok {
+		a.Serializer.JSON(rw, http.StatusUnauthorized, nil)
 		return
 	}
 
-	sessionId := ""
-	if value, ok := session.Values[sessionIdKey]; ok {
-		sessionId = value.(string)
+	a.Serializer.JSON(rw, http.StatusOK, user)
+}
+
+func (a *authService) providers(rw http.ResponseWriter, req *http.Request) {
+	providers := make([]LoginProvider, 0)
+
+	for name, uri := range a.Providers {
+		providers = append(providers, LoginProvider{name, uri})
 	}
 
-	if sessionId == "" {
-		sessionId = uuid.New()
-	}
-
-	users[sessionId] = user
-	session.Values[sessionIdKey] = sessionId
-
-	session.Save(req, rw)
+	a.Serializer.JSON(rw, http.StatusOK, providers)
 }
 
 func (a *authService) authCallback(rw http.ResponseWriter, req *http.Request) {
@@ -91,13 +81,52 @@ func (a *authService) authCallback(rw http.ResponseWriter, req *http.Request) {
 	t.Execute(rw, user)
 }
 
-func (a *authService) index(rw http.ResponseWriter, req *http.Request) {
-	user, ok := a.getCurrentUser(req)
-	if ok {
-		t, _ := template.New("old").Parse(oldUserTemplte)
-		t.Execute(rw, user)
-	} else {
-		t, _ := template.New("login").Parse(loginTemplate)
-		t.Execute(rw, nil)
+func (a *authService) logout(rw http.ResponseWriter, req *http.Request) {
+	a.Serializer.JSON(rw, http.StatusOK, "Noop - ToDo")
+}
+
+/////////////
+// Helpers //
+/////////////
+
+func getSessionId(session *sessions.Session) string {
+	sessionId := ""
+	if value, ok := session.Values[sessionIdKey]; ok {
+		sessionId = value.(string)
 	}
+	return sessionId
+}
+
+func (a *authService) getCurrentUser(req *http.Request) (user goth.User, ok bool) {
+	session, err := a.SessionStore.Get(req, a.SessionName)
+	if err != nil {
+		ok = false
+		return
+	}
+
+	sessionId := getSessionId(session)
+	if sessionId == "" {
+		ok = false
+		return
+	}
+
+	user, ok = users[sessionId]
+	return
+}
+
+func (a *authService) setCurrentUser(rw http.ResponseWriter, req *http.Request, user goth.User) {
+	session, err := a.SessionStore.Get(req, a.SessionName)
+	if err != nil {
+		return
+	}
+
+	sessionId := getSessionId(session)
+	if sessionId == "" {
+		sessionId = uuid.New()
+	}
+
+	users[sessionId] = user
+	session.Values[sessionIdKey] = sessionId
+
+	session.Save(req, rw)
 }
