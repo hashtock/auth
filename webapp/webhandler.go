@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
 	"github.com/hashtock/service-tools/serialize"
 	"github.com/markbates/goth/gothic"
 
@@ -16,9 +15,7 @@ import (
 // Handlers build http handler for service API
 func Handlers(cfg *conf.Config) http.Handler {
 	auth := authService{
-		SessionName:  cfg.SessionName,
-		SessionStore: sessions.NewCookieStore([]byte(cfg.SessionSecret)),
-		Serializer:   serialize.WebAPISerializer{},
+		Serializer: serialize.WebAPISerializer{},
 	}
 
 	m := mux.NewRouter()
