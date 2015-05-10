@@ -11,6 +11,8 @@ import (
 var (
 	keyAppAddress         = "APP_ADDRESS"
 	keyServeAddress       = "SERVE_ADDRESS"
+	keyDB                 = "DB"
+	keyDBName             = "DBName"
 	keySessionName        = "SESSION_KEY"
 	keySessionSecret      = "SESSION_SECRET"
 	keyGoogleClientID     = "GOOGLE_CLIENT_ID"
@@ -22,10 +24,16 @@ func init() {
 	confTool.EnvVariableHelp = map[string]string{
 		keyAppAddress:         "External address to application",
 		keyServeAddress:       "Host and port for the service",
+		keyDB:                 "Location of DB",
+		keyDBName:             "Name of DB to use",
 		keySessionName:        "Session key name",
 		keySessionSecret:      "Session secret used for encrypting",
 		keyGoogleClientID:     "Google app client id",
 		keyGoogleClientSecret: "Google app shared secret",
+	}
+	confTool.Defaults = map[string]interface{}{
+		keyDB:     "localhost",
+		keyDBName: "auth",
 	}
 }
 
@@ -39,6 +47,8 @@ func loadConfig() {
 	cfg.GoogleClientSecret = confTool.StringValue(keyGoogleClientSecret)
 	cfg.SessionName = confTool.StringValue(keySessionName)
 	cfg.ServeAddress = confTool.StringValue(keyServeAddress)
+	cfg.DB = confTool.StringValue(keyDB)
+	cfg.DBName = confTool.StringValue(keyDBName)
 
 	appAddress := confTool.StringValue(keyAppAddress)
 	appURL, err := url.Parse(appAddress)

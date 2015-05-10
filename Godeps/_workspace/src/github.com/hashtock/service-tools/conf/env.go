@@ -24,8 +24,8 @@ func MakeKey(key string) string {
 }
 
 func valueOrDefault(key string) interface{} {
-	key = MakeKey(key)
-	value := os.Getenv(key)
+	envkey := MakeKey(key)
+	value := os.Getenv(envkey)
 
 	if value != "" {
 		return value
@@ -33,7 +33,7 @@ func valueOrDefault(key string) interface{} {
 		return defaultValue
 	}
 
-	fmt.Printf("Could not get value using environment key: %v\n\n", key)
+	fmt.Printf("Could not get value using environment key: %v\n\n", envkey)
 	printConfHelp()
 	os.Exit(1)
 

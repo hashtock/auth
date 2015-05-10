@@ -4,20 +4,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 
+	"github.com/hashtock/auth/core"
+	"github.com/hashtock/auth/storage"
 	"github.com/hashtock/service-tools/serialize"
 )
 
-var users map[string]goth.User
-
-func init() {
-	users = make(map[string]goth.User, 0)
-}
-
 type authService struct {
 	Serializer serialize.Serializer
+	Storage    storage.UserSessioner
 	Providers  map[string]string
 }
 
@@ -31,9 +27,9 @@ type LoginProvider struct {
 //////////////
 
 func (a *authService) who(rw http.ResponseWriter, req *http.Request) {
-	user, ok := getCurrentUser(req)
-	if !ok {
-		a.Serializer.JSON(rw, http.StatusUnauthorized, nil)
+	user, err := getCurrentUser(req, a.Storage)
+	if err != nil {
+		a.Serializer.JSON(rw, http.StatusUnauthorized, err)
 		return
 	}
 
@@ -51,17 +47,27 @@ func (a *authService) providers(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (a *authService) authCallback(rw http.ResponseWriter, req *http.Request) {
-	user, err := gothic.CompleteUserAuth(rw, req)
+	authUser, err := gothic.CompleteUserAuth(rw, req)
 	if err != nil {
 		fmt.Fprintln(rw, err)
 		return
 	}
 
-	setCurrentUser(rw, req, user)
+	user := core.User{
+		Name:   authUser.Name,
+		Email:  authUser.Email,
+		Avatar: authUser.AvatarURL,
+	}
+
+	if err := setCurrentUser(rw, req, &user, a.Storage); err != nil {
+		a.Serializer.JSON(rw, http.StatusInternalServerError, err)
+		return
+	}
+
 	a.Serializer.JSON(rw, http.StatusOK, user)
 }
 
 func (a *authService) logout(rw http.ResponseWriter, req *http.Request) {
-	removeSession(rw, req)
+	removeSession(rw, req, a.Storage)
 	rw.WriteHeader(http.StatusOK)
 }

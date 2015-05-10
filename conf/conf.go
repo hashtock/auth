@@ -9,6 +9,8 @@ import (
 type Config struct {
 	AppAddress         *url.URL
 	ServeAddress       string
+	DB                 string
+	DBName             string
 	SessionName        string
 	SessionSecret      string
 	GoogleClientID     string

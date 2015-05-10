@@ -1,16 +1,24 @@
 package webapp
 
 import (
+	"errors"
+	"log"
 	"net/http"
 	"time"
 
 	"code.google.com/p/go-uuid/uuid"
-	"github.com/markbates/goth"
+
+	"github.com/hashtock/auth/core"
+	"github.com/hashtock/auth/storage"
 )
 
 const (
 	SessionName   = "auth_session_id"
 	SessionTimout = 7 * 24 * time.Hour
+)
+
+var (
+	ErrUserNotLoggedIn = errors.New("User not logged in")
 )
 
 func getSessionId(req *http.Request) string {
@@ -22,24 +30,26 @@ func getSessionId(req *http.Request) string {
 	return cookie.Value
 }
 
-func getCurrentUser(req *http.Request) (user goth.User, ok bool) {
+func getCurrentUser(req *http.Request, store storage.UserSessioner) (user *core.User, err error) {
 	sessionId := getSessionId(req)
 	if sessionId == "" {
-		ok = false
+		err = ErrUserNotLoggedIn
 		return
 	}
 
-	user, ok = users[sessionId]
+	user, err = store.GetUser(sessionId)
 	return
 }
 
-func setCurrentUser(rw http.ResponseWriter, req *http.Request, user goth.User) {
+func setCurrentUser(rw http.ResponseWriter, req *http.Request, user *core.User, store storage.UserSessioner) (err error) {
 	sessionId := getSessionId(req)
 	if sessionId == "" {
 		sessionId = uuid.New()
 	}
 
-	users[sessionId] = user
+	if err = store.SetUser(sessionId, user); err != nil {
+		return
+	}
 
 	cookie := http.Cookie{
 		Name:    SessionName,
@@ -49,9 +59,11 @@ func setCurrentUser(rw http.ResponseWriter, req *http.Request, user goth.User) {
 		Expires: time.Now().Add(SessionTimout),
 	}
 	http.SetCookie(rw, &cookie)
+
+	return
 }
 
-func removeSession(rw http.ResponseWriter, req *http.Request) {
+func removeSession(rw http.ResponseWriter, req *http.Request, store storage.UserSessioner) {
 	sessionId := getSessionId(req)
 	if sessionId == "" {
 		// No session - nothing to do
@@ -66,4 +78,9 @@ func removeSession(rw http.ResponseWriter, req *http.Request) {
 		Expires: time.Now().Add(-time.Hour),
 	}
 	http.SetCookie(rw, &cookie)
+
+	if err := store.DelUser(sessionId); err != nil {
+		log.Printf("Could not remove session %v from storage.", err)
+	}
+	return
 }

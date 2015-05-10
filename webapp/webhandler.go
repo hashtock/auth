@@ -10,12 +10,20 @@ import (
 	"github.com/markbates/goth/gothic"
 
 	"github.com/hashtock/auth/conf"
+	"github.com/hashtock/auth/storage"
 )
 
 // Handlers build http handler for service API
 func Handlers(cfg *conf.Config) http.Handler {
+	storage, err := storage.NewMongoStorage(cfg.DB, cfg.DBName)
+	if err != nil {
+		fmt.Println("Could not configure storage. ", err)
+		os.Exit(1)
+	}
+
 	auth := authService{
 		Serializer: serialize.WebAPISerializer{},
+		Storage:    storage,
 	}
 
 	m := mux.NewRouter()
