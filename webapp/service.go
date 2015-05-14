@@ -17,11 +17,6 @@ type authService struct {
 	Providers  map[string]string
 }
 
-type LoginProvider struct {
-	Name string `json:"name"`
-	URI  string `json:"uri"`
-}
-
 //////////////
 // Handlers //
 //////////////
@@ -37,13 +32,7 @@ func (a *authService) who(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (a *authService) providers(rw http.ResponseWriter, req *http.Request) {
-	providers := make([]LoginProvider, 0)
-
-	for name, uri := range a.Providers {
-		providers = append(providers, LoginProvider{name, uri})
-	}
-
-	a.Serializer.JSON(rw, http.StatusOK, providers)
+	a.Serializer.JSON(rw, http.StatusOK, a.Providers)
 }
 
 func (a *authService) authCallback(rw http.ResponseWriter, req *http.Request) {
