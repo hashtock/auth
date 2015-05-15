@@ -11,7 +11,6 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/gplus"
 
-	"github.com/hashtock/auth/conf"
 	"github.com/hashtock/auth/storage"
 )
 
@@ -20,15 +19,23 @@ const (
 	callbackRoute = "callback"
 )
 
+type Options struct {
+	Serializer         serialize.Serializer
+	Storage            storage.UserSessioner
+	AppAddress         *url.URL
+	GoogleClientID     string
+	GoogleClientSecret string
+	SessionSecret      string
+}
+
 // Handlers build http handler for service API
-func Handlers(cfg *conf.Config, sessioner storage.UserSessioner) http.Handler {
-	auth := authService{
-		Serializer: serialize.WebAPISerializer{},
-		Storage:    sessioner,
+func Handlers(options Options) http.Handler {
+	auth := authController{
+		Serializer: options.Serializer,
+		Storage:    options.Storage,
 	}
 
 	m := pat.New()
-
 	m.Get("/who/", auth.who)
 	m.Get("/providers/", auth.providers)
 	m.Get("/logout/", auth.logout)
@@ -36,14 +43,14 @@ func Handlers(cfg *conf.Config, sessioner storage.UserSessioner) http.Handler {
 	m.Get("/login/{provider}/", gothic.BeginAuthHandler).Name(loginRoute)
 
 	// Use our secret key
-	gothic.AppKey = cfg.SessionSecret
+	gothic.AppKey = options.SessionSecret
 	gothic.Store = sessions.NewCookieStore([]byte(gothic.AppKey))
 
 	// Set up the provider(s)
-	gplusLogin, gplusCallback := urlForProvider(cfg.AppAddress, m, "gplus")
+	gplusLogin, gplusCallback := urlForProvider(options.AppAddress, m, "gplus")
 	auth.Providers = map[string]string{"gplus": gplusLogin}
 	goth.UseProviders(
-		gplus.New(cfg.GoogleClientID, cfg.GoogleClientSecret, gplusCallback),
+		gplus.New(options.GoogleClientID, options.GoogleClientSecret, gplusCallback),
 	)
 
 	return m
