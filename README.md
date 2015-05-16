@@ -22,7 +22,9 @@ Once authenticated user object, returned by provider, is stored in permanent sto
 ### Current user
 
 URI: `/who/`
+
 Method: `GET`
+
 Returns: Current user object or `401 Unauthorized` when user is not logged in
 Example:
 
@@ -39,33 +41,33 @@ Example:
 ### Auth providers
 
 URI: `/providers/`
+
 Method: `GET`
+
 Returns: Map of allowed providers and URI to use to login in with them
 Example:
 
 `GET /providers/`
 
 ```json
-[
-    {
-        "name": "gplus",
-        "uri": "/login/gplus/"
-    },
-    {
-        "name": "facebook",
-        "uri": "/login/facebook/"
-    }
-]
+{
+    "gplus": "/login/gplus/",
+    "facebook": "/login/facebook/"
+}
 ```
 
 ### Login with provider
 
 URI: `/login/{provider}/`
+
 Method: `GET`
+
 Returns: Redirection to provider's authentication page
 
 ### Logout
 
 URI: `/logout/`
+
 Method: `GET`
+
 Returns: Log user out of the system
