@@ -1,17 +1,16 @@
 package webapp
 
 import (
-	"code.google.com/p/go-uuid/uuid"
 	"errors"
 	"log"
 	"net/http"
 	"time"
 
+	"code.google.com/p/go-uuid/uuid"
+	"github.com/hashtock/service-tools/serialize"
 	"github.com/markbates/goth/gothic"
 
 	"github.com/hashtock/auth/core"
-	"github.com/hashtock/auth/storage"
-	"github.com/hashtock/service-tools/serialize"
 )
 
 const (
@@ -25,7 +24,7 @@ var (
 
 type authController struct {
 	Serializer serialize.Serializer
-	Storage    storage.UserSessioner
+	Storage    core.UserSessioner
 	Providers  map[string]string
 }
 
@@ -45,10 +44,10 @@ func (a *authController) who(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user, err := a.Storage.GetUser(sessionId)
+	user, err := a.Storage.GetUserBySession(sessionId)
 	if err != nil {
 		errCode := http.StatusInternalServerError
-		if err == storage.ErrSessionNotFound {
+		if err == core.ErrSessionNotFound {
 			err = ErrUserNotLoggedIn
 			errCode = http.StatusUnauthorized
 		}
@@ -82,7 +81,7 @@ func (a *authController) authCallback(rw http.ResponseWriter, req *http.Request)
 		sessionId = uuid.New()
 	}
 
-	if err := a.Storage.SetUser(sessionId, user); err != nil {
+	if err := a.Storage.AddUserToSession(sessionId, user); err != nil {
 		a.Serializer.JSON(rw, http.StatusInternalServerError, err)
 		return
 	}
@@ -116,7 +115,7 @@ func (a *authController) logout(rw http.ResponseWriter, req *http.Request) {
 	}
 	http.SetCookie(rw, &cookie)
 
-	if err := a.Storage.DelUser(sessionId); err != nil {
+	if err := a.Storage.DeleteSession(sessionId); err != nil {
 		// While cleanup operation failed, user session is gone now, so continue
 		log.Printf("Could not remove session %v from storage.", err)
 	}

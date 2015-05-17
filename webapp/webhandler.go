@@ -11,7 +11,7 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/gplus"
 
-	"github.com/hashtock/auth/storage"
+	"github.com/hashtock/auth/core"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 
 type Options struct {
 	Serializer         serialize.Serializer
-	Storage            storage.UserSessioner
+	Storage            core.UserSessioner
 	AppAddress         *url.URL
 	GoogleClientID     string
 	GoogleClientSecret string

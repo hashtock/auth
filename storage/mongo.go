@@ -50,7 +50,7 @@ func (m *MgoStorage) userColection() *mgo.Collection {
 	return session.DB(m.dbName).C(userColection)
 }
 
-func (m *MgoStorage) GetUser(sessionId string) (*core.User, error) {
+func (m *MgoStorage) GetUserBySession(sessionId string) (*core.User, error) {
 	col := m.userColection()
 	defer col.Database.Session.Close()
 
@@ -59,12 +59,12 @@ func (m *MgoStorage) GetUser(sessionId string) (*core.User, error) {
 
 	err := col.Find(selector).One(&mUser)
 	if err == mgo.ErrNotFound {
-		err = ErrSessionNotFound
+		err = core.ErrSessionNotFound
 	}
 	return &mUser.User, err
 }
 
-func (m *MgoStorage) SetUser(sessionId string, user *core.User) (err error) {
+func (m *MgoStorage) AddUserToSession(sessionId string, user *core.User) (err error) {
 	col := m.userColection()
 	defer col.Database.Session.Close()
 
@@ -83,7 +83,6 @@ func (m *MgoStorage) SetUser(sessionId string, user *core.User) (err error) {
 		err = col.Insert(&mUser)
 	} else {
 		// User in place, try to add sessionId
-
 		change := bson.M{
 			"$addToSet": bson.M{
 				"session": sessionId,
@@ -95,7 +94,7 @@ func (m *MgoStorage) SetUser(sessionId string, user *core.User) (err error) {
 	return err
 }
 
-func (m *MgoStorage) DelUser(sessionId string) error {
+func (m *MgoStorage) DeleteSession(sessionId string) error {
 	col := m.userColection()
 	defer col.Database.Session.Close()
 
@@ -109,7 +108,7 @@ func (m *MgoStorage) DelUser(sessionId string) error {
 
 	err := col.Update(selector, change)
 	if err == mgo.ErrNotFound {
-		err = ErrSessionNotFound
+		err = core.ErrSessionNotFound
 	}
 	return err
 }
