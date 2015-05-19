@@ -1,64 +1,17 @@
 package webapp_test
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
-	"github.com/hashtock/service-tools/serialize"
+	"github.com/markbates/goth"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hashtock/auth/core"
 	"github.com/hashtock/auth/webapp"
 )
-
-type mapStorage struct {
-	Data map[string]*core.User
-}
-
-func (m *mapStorage) GetUserBySession(sessionId string) (*core.User, error) {
-	value, ok := m.Data[sessionId]
-	if !ok {
-		return nil, core.ErrSessionNotFound
-	}
-	return value, nil
-}
-func (m *mapStorage) AddUserToSession(sessionId string, user *core.User) error {
-	m.Data[sessionId] = user
-	return nil
-}
-func (m *mapStorage) DeleteSession(sessionId string) error {
-	delete(m.Data, sessionId)
-	return nil
-}
-
-type serializerLog struct {
-	obj interface{}
-}
-
-func (s *serializerLog) JSON(rw http.ResponseWriter, status int, obj interface{}) {
-	s.obj = obj
-	ser := serialize.WebAPISerializer{}
-	ser.JSON(rw, status, obj)
-}
-
-func makeHandler() (http.Handler, *serializerLog, *mapStorage) {
-	url, _ := url.Parse("http://localhost:1234")
-	serializer := new(serializerLog)
-	storage := &mapStorage{
-		Data: make(map[string]*core.User),
-	}
-
-	options := webapp.Options{
-		AppAddress: url,
-		Storage:    storage,
-		Serializer: serializer,
-	}
-
-	handler := webapp.Handlers(options)
-	return handler, serializer, storage
-}
 
 func TestWhoNotLoggedIn(t *testing.T) {
 	handler, serializer, _ := makeHandler()
@@ -86,4 +39,108 @@ func TestWhoLoggedIn(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.EqualValues(t, user, serializer.obj)
+}
+
+func TestWhoWrongSession(t *testing.T) {
+	handler, serializer, _ := makeHandler()
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest("GET", "/who/", nil)
+	req.AddCookie(&http.Cookie{Name: webapp.SessionName, Value: "fake-session"})
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Equal(t, "{}", w.Body.String())
+	assert.EqualValues(t, webapp.ErrUserNotLoggedIn, serializer.obj)
+}
+
+func TestWhoOtherError(t *testing.T) {
+	handler, serializer, storage := makeHandler()
+	w := httptest.NewRecorder()
+
+	err := errors.New("Some other error")
+	storage.NextError = err
+
+	req, _ := http.NewRequest("GET", "/who/", nil)
+	req.AddCookie(&http.Cookie{Name: webapp.SessionName, Value: "fake-session"})
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, "{}", w.Body.String())
+	assert.EqualValues(t, err, serializer.obj)
+}
+
+func TestProviders(t *testing.T) {
+	handler, serializer, _ := makeHandler()
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest("GET", "/providers/", nil)
+	handler.ServeHTTP(w, req)
+
+	expectedProviders := map[string]string{
+		"gplus": "/login/gplus/",
+	}
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.EqualValues(t, expectedProviders, serializer.obj)
+}
+
+func TestLoginGoogle(t *testing.T) {
+	handler, _, _ := makeHandler()
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest("GET", "/login/gplus/", nil)
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusTemporaryRedirect, w.Code)
+	assert.Contains(t, w.HeaderMap["Location"][0], "https://accounts.google.com/o/oauth2/auth")
+}
+
+func TestLoginFakeProvider(t *testing.T) {
+	handler, serializer, storage := makeHandler()
+
+	flow := func(handler http.Handler, nextError error) *httptest.ResponseRecorder {
+		// Login
+		wLogin := httptest.NewRecorder()
+
+		provider := &testProvider{NextError: nextError}
+		goth.UseProviders(provider)
+
+		req, _ := http.NewRequest("GET", "/login/faux/", nil)
+		handler.ServeHTTP(wLogin, req)
+
+		assert.Equal(t, http.StatusTemporaryRedirect, wLogin.Code)
+		assert.Equal(t, wLogin.HeaderMap["Location"][0], "http://example.com/auth/")
+
+		// Callback
+		wCallback := httptest.NewRecorder()
+
+		reqCallback, _ := http.NewRequest("GET", "/login/faux/callback", nil)
+		reqCallback.Header["Cookie"] = wLogin.HeaderMap["Set-Cookie"]
+		handler.ServeHTTP(wCallback, reqCallback)
+
+		return wCallback
+	}
+
+	// Error in auth
+	wAuthErr := flow(handler, errors.New("Auth error"))
+	assert.EqualValues(t, errors.New("Auth error"), serializer.obj)
+	assert.Equal(t, http.StatusInternalServerError, wAuthErr.Code)
+
+	// Error in auth
+	storage.NextError = errors.New("Storage error")
+	wStorErr := flow(handler, nil)
+	assert.EqualValues(t, errors.New("Storage error"), serializer.obj)
+	assert.Equal(t, http.StatusInternalServerError, wStorErr.Code)
+
+	// All ok
+	wOk := flow(handler, nil)
+	user := &core.User{Name: "name", Email: "email", Avatar: ""}
+	assert.EqualValues(t, user, serializer.obj)
+	assert.Equal(t, http.StatusOK, wOk.Code)
+	cookie := wOk.HeaderMap["Set-Cookie"][0]
+	assert.Contains(t, cookie, webapp.SessionName)
+	assert.Contains(t, cookie, "Path=/;")
+	assert.Contains(t, cookie, "HttpOnly")
+	assert.Contains(t, cookie, "Max-Age=604800;")
 }

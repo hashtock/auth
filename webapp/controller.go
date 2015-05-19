@@ -87,11 +87,12 @@ func (a *authController) authCallback(rw http.ResponseWriter, req *http.Request)
 	}
 
 	cookie := http.Cookie{
-		Name:    SessionName,
-		Value:   sessionId,
-		Path:    "/",
-		MaxAge:  int(SessionTimout.Seconds()),
-		Expires: time.Now().Add(SessionTimout),
+		Name:     SessionName,
+		Value:    sessionId,
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   int(SessionTimout.Seconds()),
+		Expires:  time.Now().Add(SessionTimout),
 	}
 	http.SetCookie(rw, &cookie)
 
