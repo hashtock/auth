@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"time"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -11,6 +12,13 @@ import (
 
 const (
 	userColection = "user"
+)
+
+var (
+	ErrDBUrlMissing  = errors.New("Url to Mongodb not provided")
+	ErrDBNameMissing = errors.New("Name of database for Mongodb not provided")
+
+	DialTimout = 5 * time.Second
 )
 
 type MgoStorage struct {
@@ -26,12 +34,12 @@ type mongoUser struct {
 
 func NewMongoStorage(dbUrl string, dbName string) (*MgoStorage, error) {
 	if dbUrl == "" {
-		return nil, errors.New("Url to Mongodb not provided")
+		return nil, ErrDBUrlMissing
 	} else if dbName == "" {
-		return nil, errors.New("Name of database for Mongodb not provided")
+		return nil, ErrDBNameMissing
 	}
 
-	msession, err := mgo.Dial(dbUrl)
+	msession, err := mgo.DialWithTimeout(dbUrl, DialTimout)
 	if err != nil {
 		return nil, err
 	}
