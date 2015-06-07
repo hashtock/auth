@@ -144,3 +144,55 @@ func TestLoginFakeProvider(t *testing.T) {
 	assert.Contains(t, cookie, "HttpOnly")
 	assert.Contains(t, cookie, "Max-Age=604800;")
 }
+
+func TestLogout(t *testing.T) {
+	handler, _, storage := makeHandler()
+	w := httptest.NewRecorder()
+
+	sessionId := "session"
+	user := &core.User{Name: "user", Email: "email", Avatar: "avatar"}
+	storage.AddUserToSession(sessionId, user)
+
+	// Sanity check
+	assert.Len(t, storage.Data, 1)
+
+	req, _ := http.NewRequest("GET", "/logout/", nil)
+	req.AddCookie(&http.Cookie{Name: webapp.SessionName, Value: sessionId})
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.HeaderMap["Set-Cookie"][0], "auth_session_id=;") // Session id cleared from cookies
+	assert.Len(t, storage.Data, 0)                                        // Session id removed also from storage
+}
+
+func TestLogoutUserWithoutSession(t *testing.T) {
+	handler, _, _ := makeHandler()
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest("GET", "/logout/", nil)
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Len(t, w.HeaderMap["Set-Cookie"], 0) // Cookies untouched
+}
+
+func TestLogoutErrorInStorage(t *testing.T) {
+	handler, _, storage := makeHandler()
+	w := httptest.NewRecorder()
+
+	sessionId := "session"
+	user := &core.User{Name: "user", Email: "email", Avatar: "avatar"}
+	storage.AddUserToSession(sessionId, user)
+
+	// Sanity check
+	assert.Len(t, storage.Data, 1)
+	storage.NextError = errors.New("Some other error")
+
+	req, _ := http.NewRequest("GET", "/logout/", nil)
+	req.AddCookie(&http.Cookie{Name: webapp.SessionName, Value: sessionId})
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Len(t, storage.Data, 1)                                        // Session id still there
+	assert.Contains(t, w.HeaderMap["Set-Cookie"][0], "auth_session_id=;") // But session id cleared from cookies
+}

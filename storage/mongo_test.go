@@ -64,7 +64,7 @@ func TestMongoStorageMissingDBName(t *testing.T) {
 
 func TestMongoStorageWrongUrl(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Skip the test as waitint for bad url takes some time")
+		t.Skip("Skip the test as waiting for bad url takes some time")
 	}
 
 	mgoStorage, err := storage.NewMongoStorage("fake-url", "test_db_123")
