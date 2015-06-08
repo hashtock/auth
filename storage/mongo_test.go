@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	dbUrl = "localhost"
+	dbUrl = "127.0.0.1"
 )
 
 func init() {
-	storage.DialTimout = 200 * time.Microsecond
+	storage.DialTimout = 200 * time.Millisecond
 }
 
 func newStorage(t *testing.T) (*storage.MgoStorage, string) {
