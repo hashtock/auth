@@ -2,6 +2,7 @@ package serialize
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -12,9 +13,15 @@ type Serializer interface {
 type WebAPISerializer struct{}
 
 func (w WebAPISerializer) JSON(rw http.ResponseWriter, status int, obj interface{}) {
+	if err, ok := obj.(error); ok {
+		obj = err.Error()
+	}
+
 	data, err := json.Marshal(obj)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		msg := "Could not serialize object to JSON"
+		http.Error(rw, msg, http.StatusInternalServerError)
+		log.Printf("%v. Obj: %#v. Err: %v", msg, obj, err.Error())
 		return
 	}
 
