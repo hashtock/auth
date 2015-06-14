@@ -8,7 +8,6 @@ go:
 
 install:
     - go get github.com/tools/godep
-    - go get github.com/stretchr/testify/assert
 
 script:
     - godep go test ./...

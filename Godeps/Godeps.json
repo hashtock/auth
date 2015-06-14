@@ -11,6 +11,11 @@
 			"Rev": "7dda39b2e7d5e265014674c5af696ba4186679e9"
 		},
 		{
+			"ImportPath": "github.com/codegangsta/negroni",
+			"Comment": "v0.1-70-gc7477ad",
+			"Rev": "c7477ad8e330bef55bf1ebe300cf8aa67c492d1b"
+		},
+		{
 			"ImportPath": "github.com/gorilla/context",
 			"Rev": "215affda49addc4c8ef7e2534915df2c8c35c6cd"
 		},
@@ -44,7 +49,8 @@
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/assert",
-			"Rev": "dab07ac62d4905d3e48d17dc549c684ac3b7c15a"
+			"Comment": "v1.0-12-g7e4a149",
+			"Rev": "7e4a149930b09fe4c2b134c50ce637457ba6e966"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
