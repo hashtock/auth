@@ -1,7 +1,6 @@
 package webapp
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -16,10 +15,6 @@ import (
 const (
 	SessionName   = "auth_session_id"
 	SessionTimout = 7 * 24 * time.Hour
-)
-
-var (
-	ErrUserNotLoggedIn = errors.New("User not logged in")
 )
 
 type authController struct {
@@ -40,7 +35,7 @@ func getSessionId(req *http.Request) string {
 func (a *authController) who(rw http.ResponseWriter, req *http.Request) {
 	sessionId := getSessionId(req)
 	if sessionId == "" {
-		a.Serializer.JSON(rw, http.StatusUnauthorized, ErrUserNotLoggedIn)
+		a.Serializer.JSON(rw, http.StatusUnauthorized, core.ErrUserNotLoggedIn)
 		return
 	}
 
@@ -48,7 +43,7 @@ func (a *authController) who(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		errCode := http.StatusInternalServerError
 		if err == core.ErrSessionNotFound {
-			err = ErrUserNotLoggedIn
+			err = core.ErrUserNotLoggedIn
 			errCode = http.StatusUnauthorized
 		}
 
