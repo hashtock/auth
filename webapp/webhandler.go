@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/pat"
 	"github.com/gorilla/sessions"
 	"github.com/hashtock/service-tools/serialize"
@@ -36,6 +37,12 @@ func Handlers(options Options) http.Handler {
 	}
 
 	m := pat.New()
+	if options.AppAddress.Path != "" {
+		r := mux.NewRouter()
+		sub := r.PathPrefix(options.AppAddress.Path).Subrouter()
+		m.Router = *sub
+	}
+
 	m.Get("/who/", auth.who)
 	m.Get("/providers/", auth.providers)
 	m.Get("/logout/", auth.logout)
