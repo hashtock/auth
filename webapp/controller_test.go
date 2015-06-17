@@ -22,7 +22,7 @@ func TestWhoNotLoggedIn(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Equal(t, `"User not logged in"`, w.Body.String())
-	assert.EqualValues(t, webapp.ErrUserNotLoggedIn, serializer.obj)
+	assert.EqualValues(t, core.ErrUserNotLoggedIn, serializer.obj)
 }
 
 func TestWhoLoggedIn(t *testing.T) {
@@ -51,7 +51,7 @@ func TestWhoWrongSession(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Equal(t, `"User not logged in"`, w.Body.String())
-	assert.EqualValues(t, webapp.ErrUserNotLoggedIn, serializer.obj)
+	assert.EqualValues(t, core.ErrUserNotLoggedIn, serializer.obj)
 }
 
 func TestWhoOtherError(t *testing.T) {
