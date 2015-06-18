@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/markbates/goth"
+	"github.com/markbates/goth/providers/gplus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hashtock/auth/core"
@@ -85,8 +86,24 @@ func TestProviders(t *testing.T) {
 	assert.EqualValues(t, expectedProviders, serializer.obj)
 }
 
+func TestProvidersAsRelativeToPath(t *testing.T) {
+	handler, serializer, _ := makeHandlerSubPath("/some/path/")
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest("GET", "/some/path/providers/", nil)
+	handler.ServeHTTP(w, req)
+
+	expectedProviders := map[string]string{
+		"gplus": "/some/path/login/gplus/",
+	}
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.EqualValues(t, expectedProviders, serializer.obj)
+}
+
 func TestLoginGoogle(t *testing.T) {
 	handler, _, _ := makeHandler()
+	provider, _ := goth.GetProvider("gplus")
 	w := httptest.NewRecorder()
 
 	req, _ := http.NewRequest("GET", "/login/gplus/", nil)
@@ -94,6 +111,20 @@ func TestLoginGoogle(t *testing.T) {
 
 	assert.Equal(t, http.StatusTemporaryRedirect, w.Code)
 	assert.Contains(t, w.HeaderMap["Location"][0], "https://accounts.google.com/o/oauth2/auth")
+	assert.Equal(t, provider.(*gplus.Provider).CallbackURL, "http://localhost:1234/login/gplus/callback")
+}
+
+func TestLoginGoogleCallbackURL(t *testing.T) {
+	handler, _, _ := makeHandlerSubPath("/auth/path/")
+	provider, _ := goth.GetProvider("gplus")
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest("GET", "/auth/path/login/gplus/", nil)
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusTemporaryRedirect, w.Code)
+	assert.Contains(t, w.HeaderMap["Location"][0], "https://accounts.google.com/o/oauth2/auth")
+	assert.Equal(t, provider.(*gplus.Provider).CallbackURL, "http://localhost:1234/auth/path/login/gplus/callback")
 }
 
 func TestLoginFakeProvider(t *testing.T) {

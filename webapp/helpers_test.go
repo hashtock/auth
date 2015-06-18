@@ -97,9 +97,14 @@ func (t *testProvider) UnmarshalSession(data string) (goth.Session, error) {
 //////////////////
 // Test handler //
 //////////////////
-
 func makeHandler() (http.Handler, *serializerLog, *mapStorage) {
-	url, _ := url.Parse("http://localhost:1234")
+	return makeHandlerSubPath("")
+}
+
+func makeHandlerSubPath(path string) (http.Handler, *serializerLog, *mapStorage) {
+	url, _ := url.Parse("http://localhost:1234/")
+	url.Path = path
+
 	serializer := new(serializerLog)
 	storage := &mapStorage{
 		Data: make(map[string]*core.User),
