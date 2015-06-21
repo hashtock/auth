@@ -1,6 +1,7 @@
 package client
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gorilla/context"
@@ -25,6 +26,7 @@ func (w whoMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request, next
 	if err == core.ErrUserNotLoggedIn {
 		rw.WriteHeader(http.StatusUnauthorized)
 	} else if err != nil {
+		log.Println(err)
 		rw.WriteHeader(http.StatusInternalServerError)
 	} else {
 		context.Set(req, UserContextKey, user)

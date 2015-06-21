@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/codegangsta/negroni"
 	"github.com/hashtock/service-tools/serialize"
 
 	"github.com/hashtock/auth/conf"
@@ -30,7 +31,13 @@ func main() {
 
 	handler := webapp.Handlers(handlerOptions)
 
-	err = http.ListenAndServe(cfg.ServeAddress, handler)
+	n := negroni.New(
+		negroni.NewRecovery(),
+		negroni.NewLogger(),
+	)
+	n.UseHandler(handler)
+
+	err = http.ListenAndServe(cfg.ServeAddress, n)
 	if err != nil {
 		log.Fatalln(err)
 	}
