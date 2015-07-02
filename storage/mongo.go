@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"gopkg.in/mgo.v2"
@@ -76,16 +77,14 @@ func (m *MgoStorage) AddUserToSession(sessionId string, user *core.User) (err er
 	col := m.userColection()
 	defer col.Database.Session.Close()
 
-	mUser := mongoUser{}
-	mUser.Email = user.Email
+	selector := bson.M{"email": user.Email}
 
-	cnt, err := col.Find(mUser).Count()
+	cnt, err := col.Find(selector).Count()
 	if err != nil {
 		return err
-	}
-
-	if cnt == 0 {
+	} else if cnt == 0 {
 		// New user, need to create
+		mUser := mongoUser{}
 		mUser.User = *user
 		mUser.Session = []string{sessionId}
 		err = col.Insert(&mUser)
@@ -97,7 +96,7 @@ func (m *MgoStorage) AddUserToSession(sessionId string, user *core.User) (err er
 			},
 		}
 
-		err = col.Update(mUser, change)
+		err = col.Update(selector, change)
 	}
 	return err
 }
@@ -118,5 +117,28 @@ func (m *MgoStorage) DeleteSession(sessionId string) error {
 	if err == mgo.ErrNotFound {
 		err = core.ErrSessionNotFound
 	}
+	return err
+}
+
+func (m *MgoStorage) MakeUserAnAdmin(email string) error {
+	col := m.userColection()
+	defer col.Database.Session.Close()
+
+	selector := bson.M{"email": email}
+
+	cnt, err := col.Find(selector).Count()
+	if err != nil {
+		return err
+	} else if cnt == 0 {
+		return fmt.Errorf("User with email %#v not found", email)
+	}
+
+	change := bson.M{
+		"$set": bson.M{
+			"admin": true,
+		},
+	}
+	err = col.Update(selector, change)
+
 	return err
 }
