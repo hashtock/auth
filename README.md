@@ -34,6 +34,7 @@ Example:
 {
     "name": "John Doe",
     "email": "jd@example.com",
+    "admin": "true",
     "avatar": "https://www.example.com/img/jd.jpg"
 }
 ```
