@@ -57,7 +57,7 @@ func (c Client) Who(req *http.Request) (*core.User, error) {
 	user := new(core.User)
 
 	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(*user)
+	err = decoder.Decode(user)
 	resp.Body.Close()
 
 	return user, nil
